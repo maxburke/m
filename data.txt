@@ -1,0 +1,103 @@
+===============
+Base Data Types
+===============
+
+Integer
+-------
+  * 4-byte 2's complement unsigned, little endian
+
+Byte String
+-----------
+  * Length prefixed
+    Byte 0:
+        0-127: length
+          128: length is succeeding 2-bytes, little endian, unsigned (0x80 [l0][l1])
+          255: length is succeeding 4-bytes, little endian, unsigned (0xff [l0][l1][l2][l3])
+
+Reference
+---------
+  * SHA256-128 hash of object contents
+
+Reference Set
+-------------
+  * Length prefixed as above (number of items in the set)
+  * All items in the set are unique
+  * Adding duplicates will result in a validation error
+
+File Data
+---------
+File data objects are keyed by the contents of the file. A file data object
+contains the following fields:
+  * Complete file data
+
+
+==================
+Derived Data Types
+==================
+
+Repository
+----------
+  * [int] TAG
+  * [ref] Active branch
+  * [set] Branch list
+  * [str] Name
+
+Commit Item
+-----------
+  * [int] TAG
+  * [int] Flags
+  * [ref] File content reference
+  * [ref] Previous commit or resolve reference
+  * [str] File name
+
+Resolve
+-------
+  * [int] TAG
+  * [ref] Base commit (ie, from master server)
+  * [ref] Local commit
+
+Tree
+----
+Each record is a reference to either a file or a tree
+  * [int] TAG
+  * [set] Tree content
+  * [str] Name
+
+Commit
+------
+Commit objects represent marked points in time for the repository. A commit
+object contains the following fields:
+  * [int] TAG
+  * [ref] Reference to the previous commit object
+  * [ref] Commit tree root
+  * [str] Log
+
+Branch
+------
+  * [int] TAG
+  * [ref] Head commit
+  * [str] Name
+
+Master Commit
+-------------
+Master commit objects form the canonical chain of evolution of a source
+repository. Master commit objects are stored on the server only.
+  * [int] TAG
+  * [ref] Reference to the commit
+  * [ref] Reference to the previous master commit
+
+A checkin is only accepted on the master if the immediate ancestor of each 
+component is the same as the head revision in the master.
+
+
+
+Other design notes
+==================
+Pulls from master go into separate branches and must be merged into the local
+head. Merges happen automatically if appropriate conditions are met (ie: no
+new changes touch locally modified files)
+
+
+Limitations
+===========
+Commits can have at most 4 billion items.
