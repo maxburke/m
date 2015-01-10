@@ -31,21 +31,29 @@ enum m_type_tag_t
 };
 
 
+struct m_object_base_t
+{
+    struct m_sha1_hash_t ref;
+    int finalized;
+    int tag;
+};
+
+
 struct m_reference_set_t
 {
-    int tag;
+    struct m_object_base_t header;
 
     int num_items;
     int capacity;
-    m_ref_t *items;
+    struct m_object_base_t **items;
 };
 
 
 struct m_repository_t
 {
-    int tag;
+    struct m_object_base_t header;
 
-    m_ref_t active_branch;
+    struct m_object_base_t *active_branch;
     struct m_reference_set_t *branch_list;
     const char *name;
 };
@@ -53,48 +61,48 @@ struct m_repository_t
 
 struct m_commit_t
 {
-    int tag;
+    struct m_object_base_t header;
 
-    m_ref_t previous_commit;
-    m_ref_t root;
+    struct m_object_base_t *previous_commit;
+    struct m_object_base_t *root;
     const char *log;
 };
 
 
 struct m_commit_item_t
 {
-    int tag;
+    struct m_object_base_t header;
 
     uint32_t flags;
-    m_ref_t content;
-    m_ref_t history;
+    struct m_sha1_hash_t content;
+    struct m_object_base_t *history;
     const char *name;
 };
 
 
 struct m_resolve_t
 {
-    int tag;
+    struct m_object_base_t header;
 
-    m_ref_t base;
-    m_ref_t local;
+    struct m_object_base_t *base;
+    struct m_object_base_t *local;
 };
 
 
 struct m_tree_t
 {
-    int tag;
+    struct m_object_base_t header;
 
-    m_ref_t tree_contents;
+    struct m_object_base_t *tree_contents;
     const char *name;
 };
 
 
 struct m_branch_t
 {
-    int tag;
+    struct m_object_base_t header;
 
-    m_ref_t head;
+    struct m_object_base_t *head;
     const char *name;
 };
 
@@ -149,37 +157,24 @@ m_reference_set_create(void)
     reference_set->tag = M_REFERENCE_SET;
     reference_set->num_items = 0;
     reference_set->capacity = initial_capacity;
-    reference_set->items = calloc(initial_capacity, sizeof(m_ref_t));
+    reference_set->items = calloc(initial_capacity, sizeof(struct m_object_base_t *));
 
     return reference_set;
 }
 
 
 static int
-m_reference_set_find(struct m_reference_set_t *reference_set, m_ref_t item)
+m_reference_set_find(struct m_reference_set_t *reference_set, struct m_object_base_t *item)
 {
     int i;
     int e;
 
     for (i = 0, e = reference_set->num_items; i != e; ++i)
     {
-        int ii;
-        uint32_t w;
-        m_ref_t *ptr = reference_set->items + i;
-
-        for (ii = 0; ii < 5; ++ii)
+        if (reference_set->items[i] == item)
         {
-            w = ptr->h[ii];
-
-            if (w != item.h[ii])
-            {
-                goto next;
-            }
+            return i;
         }
-
-        return i;
-
-    next:;
     }
 
     return -1;
@@ -187,13 +182,13 @@ m_reference_set_find(struct m_reference_set_t *reference_set, m_ref_t item)
 
 
 void
-m_reference_set_add(struct m_reference_set_t *reference_set, m_ref_t item)
+m_reference_set_add(struct m_reference_set_t *reference_set, struct m_object_base_t *item)
 {
     int capacity;
     int num_items;
 
     assert(reference_set != NULL);
-    assert(m_reference_set_find(reference_set, item) < 0);
+    assert(m_reference_set_find(reference_set, item) == -1);
 
     capacity = reference_set->capacity;
     num_items = reference_set->num_items;
@@ -202,10 +197,10 @@ m_reference_set_add(struct m_reference_set_t *reference_set, m_ref_t item)
     {
         capacity = MAX(capacity + (capacity >> 1), capacity + 1);
 
-        m_ref_t *old_items = reference_set->items;
-        m_ref_t *new_items = calloc(capacity, sizeof(m_ref_t));
+        struct m_ref_t *old_items = reference_set->items;
+        struct m_ref_t *new_items = calloc(capacity, sizeof(struct m_ref_t));
 
-        memcpy(new_items, old_items, sizeof(m_ref_t) * num_items);
+        memcpy(new_items, old_items, sizeof(struct m_ref_t) * num_items);
 
         reference_set->capacity = capacity;
         reference_set->items = new_items;
@@ -220,7 +215,7 @@ m_reference_set_add(struct m_reference_set_t *reference_set, m_ref_t item)
 static int
 m_hash_comparer(const void *a, const void *b)
 {
-    return memcmp(a, b, sizeof(m_ref_t));
+    return memcmp(a, b, sizeof(struct m_ref_t));
 }
 
 
@@ -272,18 +267,18 @@ m_cas_write_string(struct m_cas_write_handle_t *handle, const char *string)
 
 
 static void
-m_cas_write_ref(struct m_cas_write_handle_t *handle, m_ref_t ref)
+m_cas_write_ref(struct m_cas_write_handle_t *handle, struct m_ref_t ref)
 {
     m_cas_write(handle, &ref, sizeof ref);
 }
 
 
-m_ref_t
+void
 m_reference_set_finalize(struct m_reference_set_t *reference_set)
 {
     int num_items;
-    m_ref_t *items;
-    m_ref_t rv;
+    struct m_ref_t *items;
+    struct m_ref_t rv;
     struct m_cas_write_handle_t *handle;
 
     items = reference_set->items;
@@ -291,23 +286,57 @@ m_reference_set_finalize(struct m_reference_set_t *reference_set)
 
     assert((uint64_t)num_items <= UINT64_C(0xFFFFFFFF));
 
-    qsort(items, num_items, sizeof(m_ref_t), m_hash_comparer);
+    qsort(items, num_items, sizeof(struct m_ref_t), m_hash_comparer);
 
     handle = m_cas_write_open();
 
     m_cas_write_length_header(handle, (uint32_t)num_items);
-    m_cas_write(handle, items, num_items * sizeof(m_ref_t));
+    m_cas_write(handle, items, num_items * sizeof(struct m_ref_t));
    
-    rv = m_cas_write_close(handle);
+    rv.ref = m_cas_write_close(handle);
+    rv.type = M_REFERENCE_SET;
 
-    free(reference_set);
+    return rv;
+}
+
+
+static struct m_ref_t
+m_tree_serialize(struct m_tree_t *)
+{
+}
+
+
+struct m_tree_t *
+m_tree_create(const char *log, struct m_ref_t contents)
+{
+    assert(contents.type == M_REFERENCE_SET);
+}
+
+
+static struct m_ref_t
+m_commit_serialize(struct m_commit_t *commit)
+{
+    int32_t tag;
+    struct m_ref_t rv;
+    struct m_cas_write_handle_t *handle;
+
+    tag = M_COMMIT;
+    handle = m_cas_write_open();
+
+    m_cas_write(handle, &tag, sizeof tag);
+    m_cas_write_ref(handle, commit->previous_commit);
+    m_cas_write_ref(handle, commit->root);
+    m_cas_write_string(handle, commit->log);
+
+    rv.ref = m_cas_write_close(handle);
+    rv.type = M_COMMIT;
 
     return rv;
 }
 
 
 struct m_commit_t *
-m_commit_create(const char *log, m_ref_t previous_commit, m_ref_t root)
+m_commit_create(const char *log, struct m_ref_t previous_commit, struct m_ref_t root)
 {
     struct m_commit_t *commit;
 
@@ -322,49 +351,11 @@ m_commit_create(const char *log, m_ref_t previous_commit, m_ref_t root)
 }
 
 
-m_ref_t
-m_commit_finalize(struct m_commit_t *commit)
+static struct m_ref_t
+m_commit_item_serialize(struct m_commit_item_t *commit_item)
 {
     int32_t tag;
-    m_ref_t rv;
-    struct m_cas_write_handle_t *handle;
-
-    tag = M_COMMIT;
-    handle = m_cas_write_open();
-
-    m_cas_write(handle, &tag, sizeof tag);
-    m_cas_write_ref(handle, commit->previous_commit);
-    m_cas_write_ref(handle, commit->root);
-    m_cas_write_string(handle, commit->log);
-
-    rv = m_cas_write_close(handle);
-
-    free(commit);
-
-    return rv;
-}
-
-
-struct m_commit_item_t *
-m_commit_item_create(const char *name, m_ref_t content, m_ref_t history)
-{
-    struct m_commit_item_t *commit_item;
-
-    commit_item = calloc(1, sizeof(struct m_commit_item_t));
-
-    commit_item->tag = M_COMMIT_ITEM;
-    commit_item->content = content;
-    commit_item->history = history;
-
-    return commit_item;
-}
-
-
-m_ref_t
-m_commit_item_finalize(struct m_commit_item_t *commit_item)
-{
-    int32_t tag;
-    m_ref_t rv;
+    struct m_ref_t rv;
     struct m_cas_write_handle_t *handle;
 
     tag = M_COMMIT_ITEM;
@@ -376,34 +367,34 @@ m_commit_item_finalize(struct m_commit_item_t *commit_item)
     m_cas_write_ref(handle, commit_item->history);
     m_cas_write_string(handle, commit_item->name);
 
-    rv = m_cas_write_close(handle);
-
-    free(commit);
+    rv.ref = m_cas_write_close(handle);
+    rv.type = M_COMMIT_ITEM;
 
     return rv;
 }
 
 
-struct m_resolve_t *
-m_resolve_create(m_ref_t base, m_ref_t local)
+struct m_commit_item_t *
+m_commit_item_create(const char *name, struct m_sha1_hash_t content, struct m_ref_t history)
 {
-    struct m_resolve_t *commit_item;
+    struct m_commit_item_t *commit_item;
 
-    resolve_object = calloc(1, sizeof(struct m_resolve_t));
+    commit_item = calloc(1, sizeof(struct m_commit_item_t));
 
-    resolve_object->tag = M_RESOLVE;
-    resolve_object->content = base;
-    resolve_object->history = local;
+    commit_item->tag = M_COMMIT_ITEM;
+    commit_item->content = content;
+    commit_item->history = history;
+    commit_item->name = name;
 
-    return resolve_object;
+    return commit_item;
 }
 
 
-m_ref_t
-m_resolve_finalize(struct m_resolve_t *resolve_object)
+static struct m_ref_t
+m_resolve_serialize(struct m_resolve_t *resolve_object)
 {
     int32_t tag;
-    m_ref_t rv;
+    struct m_ref_t rv;
     struct m_cas_write_handle_t *handle;
 
     tag = M_RESOLVE;
@@ -413,16 +404,30 @@ m_resolve_finalize(struct m_resolve_t *resolve_object)
     m_cas_write_ref(handle, resolve_object->base);
     m_cas_write_ref(handle, resolve_object->local);
 
-    rv = m_cas_write_close(handle);
-
-    free(commit);
+    rv.ref = m_cas_write_close(handle);
+    rv.type = M_RESOLVE;
 
     return rv;
 }
 
 
+struct m_resolve_t *
+m_resolve_create(struct m_ref_t base, struct m_ref_t local)
+{
+    struct m_resolve_t *resolve_object;
+
+    resolve_object = calloc(1, sizeof(struct m_resolve_t));
+
+    resolve_object->tag = M_RESOLVE;
+    resolve_object->base = base;
+    resolve_object->local = local;
+
+    return resolve_object;
+}
+
+
 struct m_branch_t *
-m_branch_create(const char *branch_name, m_ref_t head_ref)
+m_branch_create(const char *branch_name, struct m_ref_t head_ref)
 {
     M_UNUSED(branch_name);
     M_UNUSED(head_ref);
@@ -431,10 +436,10 @@ m_branch_create(const char *branch_name, m_ref_t head_ref)
 }
 
 
-m_ref_t
-m_branch_finalize(struct m_branch_t *branch)
+struct m_ref_t
+m_branch_serialize(struct m_branch_t *branch)
 {
-    m_ref_t rv = { 0 };
+    struct m_ref_t rv = { 0 };
 
     M_UNUSED(branch);
     
@@ -443,7 +448,7 @@ m_branch_finalize(struct m_branch_t *branch)
 
 
 struct m_repository_t *
-m_repository_create(m_ref_t branch_ref, const char *repository_name, m_ref_t branch_list_ref)
+m_repository_create(struct m_ref_t branch_ref, const char *repository_name, struct m_ref_t branch_list_ref)
 {
     M_UNUSED(branch_ref);
     M_UNUSED(repository_name);
@@ -453,10 +458,10 @@ m_repository_create(m_ref_t branch_ref, const char *repository_name, m_ref_t bra
 }
 
 
-m_ref_t
-m_repository_finalize(struct m_repository_t *repository)
+struct m_ref_t
+m_repository_serialize(struct m_repository_t *repository)
 {
-    m_ref_t rv = { 0 };
+    struct m_ref_t rv = { 0 };
 
     M_UNUSED(repository);
 

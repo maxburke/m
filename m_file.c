@@ -22,7 +22,7 @@
 #   error
 #endif
 
-#define HASH_STRING_BUFFER_SIZE ((2 * sizeof(m_ref_t)) + 1)
+#define HASH_STRING_BUFFER_SIZE ((2 * sizeof(struct m_sha1_hash_t)) + 1)
 
 struct m_cas_write_handle_t
 {
@@ -69,7 +69,7 @@ m_make_meta_dir(void)
 
 
 static void
-m_hash_to_string(char *buffer, size_t buffer_size, m_ref_t hash)
+m_hash_to_string(char *buffer, size_t buffer_size, struct m_sha1_hash_t hash)
 {
     size_t i;
     unsigned char *ptr;
@@ -80,7 +80,7 @@ m_hash_to_string(char *buffer, size_t buffer_size, m_ref_t hash)
     ptr = (unsigned char *)&hash;
     idx = 0;
 
-    for (i = 0; i < sizeof(m_ref_t); ++i)
+    for (i = 0; i < sizeof(struct m_sha1_hash_t); ++i)
     {
         unsigned char low_idx = ptr[i] & 0xf;
         unsigned char high_idx = ptr[i] >> 4;
@@ -234,7 +234,7 @@ m_cas_write(struct m_cas_write_handle_t *handle, const void *data, size_t length
 
 
 static void
-m_get_hive_path(char *path, size_t size, m_ref_t hash)
+m_get_hive_path(char *path, size_t size, struct m_sha1_hash_t hash)
 {
     int pos;
     
@@ -244,11 +244,11 @@ m_get_hive_path(char *path, size_t size, m_ref_t hash)
 }
 
 
-m_ref_t
+struct m_sha1_hash_t
 m_cas_write_close(struct m_cas_write_handle_t *handle)
 {
     char path[MAX_PATH];
-    m_ref_t hash;
+    struct m_sha1_hash_t hash;
 
     fclose(handle->fp);
     hash = m_sha1_hash_finalize(&handle->hash_context);

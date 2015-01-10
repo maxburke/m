@@ -46,22 +46,26 @@ int m_init(int argc, char **argv)
     const char *repository_name;
 
     struct m_reference_set_t *head_items;
-    m_ref_t head_items_ref;
+    struct m_ref_t head_items_ref;
 
     struct m_commit_t *head;
-    m_ref_t head_ref;
+    struct m_ref_t head_ref;
 
     struct m_branch_t *branch;
-    m_ref_t branch_ref;
+    struct m_ref_t branch_ref;
 
     struct m_reference_set_t *branch_list;
-    m_ref_t branch_list_ref;
+    struct m_ref_t branch_list_ref;
 
     struct m_repository_t *repository;
-    m_ref_t repository_ref;
+    struct m_ref_t repository_ref;
 
     char buf[1] = { 0 };
-    m_ref_t null_ref = m_sha1_hash_buffer(buf, 0);
+    struct m_sha1_hash_t null_hash = m_sha1_hash_buffer(buf, 0);
+    struct m_ref_t null_ref = { null_hash, 0 };
+
+    struct m_tree_t *tree;
+    struct m_ref_t tree_ref;
 
     if (argc < 3)
     {
@@ -78,9 +82,10 @@ int m_init(int argc, char **argv)
     head_items      = m_reference_set_create();
     head_items_ref  = m_reference_set_finalize(head_items);
 
-    tree
-#error commit needs a tree reference
-    head            = m_commit_create(null_ref, head_items_ref);
+    tree            = m_tree_create("", head_items_ref);
+    tree_ref        = m_tree_finalize(tree);
+
+    head            = m_commit_create("Repository created.", null_ref, head_items_ref);
     head_ref        = m_commit_finalize(head);
 
     branch          = m_branch_create("master", head_ref);

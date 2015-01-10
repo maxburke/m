@@ -14,7 +14,7 @@ m_cas_write_open(void);
 void
 m_cas_write(struct m_cas_write_handle_t *, const void *, size_t);
 
-m_ref_t
+struct m_sha1_hash_t
 m_cas_write_close(struct m_cas_write_handle_t *);
 
 #endif

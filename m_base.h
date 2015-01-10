@@ -3,8 +3,6 @@
 
 #include "m_sha1.h"
 
-typedef struct m_sha1_hash_t m_ref_t;
-
 #define M_ARRAY_COUNT(x) ((sizeof (x))/(sizeof (x)[0]))
 #define M_UNUSED(x) ((void)x)
 #define M_VERIFY(x, y) __pragma(warning(push)) __pragma(warning(disable:4127)) do { if (!(x)) { m_report_fatal_error(y); } } while (0) __pragma(warning(pop))
@@ -38,8 +36,9 @@ m_report_fatal_error(const char *reason);
 size_t
 strlcpy(char *dest, const char *src, size_t size);
 
+
 /*
- * Array methods
+ * Reference set methods
  */
 
 struct m_reference_set_t;
@@ -58,7 +57,7 @@ m_reference_set_create(void);
  * \param[in] item The item to add to the reference set.
  */
 void
-m_reference_set_add(struct m_reference_set_t *reference_set, m_ref_t item);
+m_reference_set_add(struct m_reference_set_t *reference_set, struct m_ref_t item);
 
 /**
  * Serializes a reference set working instance to disk, invalidating the runtime
@@ -68,35 +67,19 @@ m_reference_set_add(struct m_reference_set_t *reference_set, m_ref_t item);
  *
  * \return Data store key usable as values for other structures.
  */
-m_ref_t
+void
 m_reference_set_finalize(struct m_reference_set_t *reference_set);
 
+
 /*
- * Commit methods
+ * Repository tree
  */
 
-struct m_commit_t;
+struct m_tree_t;
 
-/**
- * Commit constructor.
- *
- * \param[in] log Full commit log.
- * \param[in] previous_commit Reference to the previous commit.
- * \param[in] root Reference to the new source tree root for this commit.
- */
-struct m_commit_t *
-m_commit_create(const char *log, m_ref_t previous_commit, m_ref_t root);
+struct m_tree_t *
+m_tree_create(const char *name, struct m_ref_t contents);
 
-/**
- * Serializes a commit working instance to disk, invalidating the runtime
- * object, and returning its data store key.
- *
- * \param[in] commit A valid commit.
- *
- * \return Data store key usable as values for other structures.
- */
-m_ref_t
-m_commit_finalize(struct m_commit_t *commit);
 
 /*
  * Commit items
@@ -112,18 +95,7 @@ struct m_commit_item_t;
  *                    object instance.
  */
 struct m_commit_item_t *
-m_commit_item_create(const char *name, m_ref_t content, m_ref_t history);
-
-/**
- * Serializes a commit item working instance to disk, invalidating the runtime
- * object, and returning its data store key.
- *
- * \param[in] commit_item A valid commit item.
- *
- * \return Data store key usable as values for other structures.
- */
-m_ref_t
-m_commit_item_finalize(struct m_commit_item_t *commit_item);
+m_commit_item_create(const char *name, struct m_ref_t content, struct m_ref_t history);
 
 
 /*
@@ -139,18 +111,25 @@ struct m_resolve_t;
  * \param[in] history Reference to the commit item that is the merge target.
  */
 struct m_resolve_t *
-m_resolve_create(m_ref_t base, m_ref_t local);
+m_resolve_create(struct m_ref_t base, struct m_ref_t local);
+
+
+/*
+ * Commit methods
+ */
+
+struct m_commit_t;
 
 /**
- * Serializes a resolve object working instance to disk, invalidating the 
- * runtime object, and returning its data store key.
+ * Commit constructor.
  *
- * \param[in] resolve_object A valid resolve object.
- *
- * \return Data store key usable as values for other structures.
+ * \param[in] log Full commit log.
+ * \param[in] previous_commit Reference to the previous commit.
+ * \param[in] root Reference to the new source tree root for this commit.
  */
-m_ref_t
-m_resolve_finalize(struct m_resolve_t *resolve_object);
+struct m_commit_t *
+m_commit_create(const char *log, struct m_ref_t previous_commit, struct m_ref_t root);
+
 
 /*
  * Branch methods
@@ -159,10 +138,8 @@ m_resolve_finalize(struct m_resolve_t *resolve_object);
 struct m_branch_t;
 
 struct m_branch_t *
-m_branch_create(const char *, m_ref_t);
+m_branch_create(const char *, struct m_ref_t);
 
-m_ref_t
-m_branch_finalize(struct m_branch_t *);
 
 /*
  * Repository methods
@@ -171,10 +148,7 @@ m_branch_finalize(struct m_branch_t *);
 struct m_repository_t;
 
 struct m_repository_t *
-m_repository_create(m_ref_t, const char *, m_ref_t);
-
-m_ref_t
-m_repository_finalize(struct m_repository_t *);
+m_repository_create(struct m_ref_t, const char *, struct m_ref_t);
 
 #endif
 
