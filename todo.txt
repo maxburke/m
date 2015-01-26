@@ -1,0 +1,13 @@
+* make api type-safe
+
+    * add type field to m_ref_t 
+      * u32[5] hash
+      * int type
+
+    - or -
+
+    * create ref types for each in-memory type
+
+* finish fleshing out missing type fns
+
+* finish init code

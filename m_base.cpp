@@ -31,48 +31,57 @@ enum m_type_tag_t
 };
 
 
-struct m_object_base_t
+class m_object_base_t
 {
+    m_object_base_t();
+
+public:
     struct m_sha1_hash_t ref;
-    int finalized;
     int tag;
+    bool finalized;
+
+    explicit m_object_base_t(int tag_value)
+        : ref()
+        , tag(tag_value)
+        , finalize(false)
+    {}
+
+    virtual ~m_object_base_t() {}
+
+    virtual void finalize() = 0;
 };
 
 
-struct m_reference_set_t
+class m_reference_set_t : public m_object_base_t
 {
-    struct m_object_base_t header;
-
+public:
     int num_items;
     int capacity;
     struct m_object_base_t **items;
 };
 
 
-struct m_repository_t
+class m_repository_t : public m_object_base_t
 {
-    struct m_object_base_t header;
-
+public:
     struct m_object_base_t *active_branch;
     struct m_reference_set_t *branch_list;
     const char *name;
 };
 
 
-struct m_commit_t
+class m_commit_t : public m_object_base_t
 {
-    struct m_object_base_t header;
-
+public:
     struct m_object_base_t *previous_commit;
     struct m_object_base_t *root;
     const char *log;
 };
 
 
-struct m_commit_item_t
+class m_commit_item_t : public m_object_base_t
 {
-    struct m_object_base_t header;
-
+public:
     uint32_t flags;
     struct m_sha1_hash_t content;
     struct m_object_base_t *history;
@@ -80,28 +89,25 @@ struct m_commit_item_t
 };
 
 
-struct m_resolve_t
+class m_resolve_t : public m_object_base_t
 {
-    struct m_object_base_t header;
-
+public:
     struct m_object_base_t *base;
     struct m_object_base_t *local;
 };
 
 
-struct m_tree_t
+class m_tree_t : public m_object_base_t
 {
-    struct m_object_base_t header;
-
+public:
     struct m_object_base_t *tree_contents;
     const char *name;
 };
 
 
-struct m_branch_t
+class m_branch_t : public m_object_base_t
 {
-    struct m_object_base_t header;
-
+public:
     struct m_object_base_t *head;
     const char *name;
 };
