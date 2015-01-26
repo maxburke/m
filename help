@@ -1,0 +1,17 @@
+m commands
+==========
+  edit <file>
+  add <file>
+  rm  <file>
+  delete <file>
+  revert <file>
+  commit
+
+  branch <branch>
+  switch <branch>
+  merge <branch>
+  push
+  pull <revision>
+  resolve
+
+  log
