@@ -43,7 +43,7 @@ public:
     explicit m_object_base_t(int tag_value)
         : ref()
         , tag(tag_value)
-        , finalize(false)
+        , finalized(false)
     {}
 
     virtual ~m_object_base_t() {}
@@ -54,10 +54,23 @@ public:
 
 class m_reference_set_t : public m_object_base_t
 {
+    static const int initial_capacity = 1;
+
 public:
     int num_items;
     int capacity;
     struct m_object_base_t **items;
+
+    m_reference_set_t()
+        : num_items(0)
+        , capacity(initial_capacity)
+        , items(new m_object_base_t *[initial_capacity])
+    {}
+
+    ~m_reference_set_t()
+    {
+        delete [] items;
+    }
 };
 
 
@@ -156,16 +169,7 @@ m_report_fatal_error(const char *reason)
 struct m_reference_set_t *
 m_reference_set_create(void)
 {
-    const int initial_capacity = 1;
-
-    struct m_reference_set_t *reference_set = calloc(1, sizeof(struct m_reference_set_t));
-
-    reference_set->tag = M_REFERENCE_SET;
-    reference_set->num_items = 0;
-    reference_set->capacity = initial_capacity;
-    reference_set->items = calloc(initial_capacity, sizeof(struct m_object_base_t *));
-
-    return reference_set;
+    return new m_reference_set_t();
 }
 
 
