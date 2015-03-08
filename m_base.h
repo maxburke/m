@@ -1,11 +1,11 @@
-#ifndef M_BASE_H
-#define M_BASE_H
+#pragma once
 
 #include "m_sha1.h"
 
 #define M_ARRAY_COUNT(x) ((sizeof (x))/(sizeof (x)[0]))
 #define M_UNUSED(x) ((void)x)
 #define M_VERIFY(x, y) __pragma(warning(push)) __pragma(warning(disable:4127)) do { if (!(x)) { m_report_fatal_error(y); } } while (0) __pragma(warning(pop))
+
 
 /**
  * Convenience method for testing string equality.
@@ -36,119 +36,50 @@ m_report_fatal_error(const char *reason);
 size_t
 strlcpy(char *dest, const char *src, size_t size);
 
+enum m_object_type_t
+{
+    M_NULL,
+    M_REFERENCE_SET,
+    M_DATA,
+    M_TREE,
+    M_COMMIT,
+    M_BRANCH,
+    M_REPOSITORY,
+    M_NUM_TYPES
+};
 
-/*
- * Reference set methods
- */
+struct m_object_t
+{
+    struct m_sha1_hash_t hash;
+    short finalized;
+    short realized;
+    unsigned int type;
+    unsigned int flags;
+};
 
-struct m_reference_set_t;
+struct m_cas_write_handle_t;
 
-/**
- * Reference set instance constructor.
- */
-struct m_reference_set_t *
-m_reference_set_create(void);
+struct m_cas_write_handle_t *
+m_serialize_begin(struct m_object_t *object);
 
-/**
- * Add a reference to the reference set. It is considered invalid behavior to 
- * add a duplicate to the reference set.
- *
- * \param[in] reference_set A valid reference set.
- * \param[in] item The item to add to the reference set.
- */
 void
-m_reference_set_add(struct m_reference_set_t *reference_set, struct m_ref_t item);
+m_serialize_i4(struct m_cas_write_handle_t *write_handle, unsigned int value);
 
-/**
- * Serializes a reference set working instance to disk, invalidating the runtime
- * object, and returning its data store key.
- *
- * \param[in] reference_set A valid reference set.
- *
- * \return Data store key usable as values for other structures.
- */
 void
-m_reference_set_finalize(struct m_reference_set_t *reference_set);
+m_serialize_string(struct m_cas_write_handle_t *write_handle, const char *string);
 
+void
+m_serialize_object_ref(struct m_cas_write_handle_t *write_handle, struct m_object_t *object);
 
-/*
- * Repository tree
- */
+void
+m_serialize_end(struct m_cas_write_handle_t *write_handle, struct m_object_t *object);
 
-struct m_tree_t;
+struct m_object_t *
+m_object_null_create(void);
 
-struct m_tree_t *
-m_tree_create(const char *name, struct m_ref_t contents);
+void
+m_object_finalize(struct m_object_t *object);
 
-
-/*
- * Commit items
- */
-struct m_commit_item_t;
-
-/**
- * Commit item constructor.
- *
- * \param[in] name The name of the commit item.
- * \param[in] content Reference to the commit item's content.
- * \param[in] history Reference to either the previous commit or a resolve
- *                    object instance.
- */
-struct m_commit_item_t *
-m_commit_item_create(const char *name, struct m_ref_t content, struct m_ref_t history);
-
-
-/*
- * Resolve methods
- */
-
-struct m_resolve_t;
-
-/**
- * Resolve object constructor.
- *
- * \param[in] base Reference to the commit item used for the merge base.
- * \param[in] history Reference to the commit item that is the merge target.
- */
-struct m_resolve_t *
-m_resolve_create(struct m_ref_t base, struct m_ref_t local);
-
-
-/*
- * Commit methods
- */
-
-struct m_commit_t;
-
-/**
- * Commit constructor.
- *
- * \param[in] log Full commit log.
- * \param[in] previous_commit Reference to the previous commit.
- * \param[in] root Reference to the new source tree root for this commit.
- */
-struct m_commit_t *
-m_commit_create(const char *log, struct m_ref_t previous_commit, struct m_ref_t root);
-
-
-/*
- * Branch methods
- */
-
-struct m_branch_t;
-
-struct m_branch_t *
-m_branch_create(const char *, struct m_ref_t);
-
-
-/*
- * Repository methods
- */
-
-struct m_repository_t;
-
-struct m_repository_t *
-m_repository_create(struct m_ref_t, const char *, struct m_ref_t);
-
-#endif
+struct object_t *
+m_object_realize(struct m_sha1_hash_t hash);
 

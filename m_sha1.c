@@ -1,5 +1,5 @@
 #ifdef _MSC_VER
-#pragma warning(push, 0)
+#   pragma warning(push, 0)
 #endif
 
 #include <assert.h>
@@ -8,13 +8,13 @@
 #include <string.h>
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+#   pragma warning(pop)
 #endif
 
 #include "m_sha1.h"
 
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
-    #define inline
+#   define inline
 #endif
 
 union uint64_to_bytes_t
@@ -23,8 +23,7 @@ union uint64_to_bytes_t
     char bytes[8];
 };
 
-
-#ifdef LITTLE_ENDIAN
+#if M_LITTLE_ENDIAN
     static inline uint32_t
     u32_to_big_endian(uint32_t p)
     {
@@ -48,11 +47,8 @@ union uint64_to_bytes_t
             *ptr++ = c8.bytes[(sizeof c8.bytes) - i - 1];
         }
     }
-#endif
-
-
-#ifdef BIG_ENDIAN
-    #define u32_to_big_endian(x) (x)
+#elif M_BIG_ENDIAN
+#   define u32_to_big_endian(x) (x)
 
     static inline void
     write_length(char *ptr, uint64_t length)
@@ -68,8 +64,9 @@ union uint64_to_bytes_t
             *ptr++ = c8.bytes[i];
         }
     }
+#else
+#   error Must define either M_LITTLE_ENDIAN to 1 or M_BIG_ENDIAN to 1
 #endif
-
 
 static inline uint32_t
 left_rotate_1(uint32_t val)
@@ -77,20 +74,17 @@ left_rotate_1(uint32_t val)
     return (val << 1) | (val >> 31);
 }
 
-
 static inline uint32_t
 left_rotate_5(uint32_t val)
 {
     return (val << 5) | (val >> 27);
 }
 
-
 static inline uint32_t
 left_rotate_30(uint32_t val)
 {
     return (val << 30) | (val >> 2);
 }
-
 
 static inline size_t
 initialize_last_chunk(char last_chunk[128], const void *data, size_t length)
@@ -114,7 +108,6 @@ initialize_last_chunk(char last_chunk[128], const void *data, size_t length)
     ptr = last_chunk;
     return 1;
 }
-
 
 static inline struct m_sha1_hash_t
 hash_chunk(struct m_sha1_hash_t h, const void *mem)
@@ -161,7 +154,7 @@ hash_chunk(struct m_sha1_hash_t h, const void *mem)
     d = h.h[3];
     e = h.h[4];
 
-    #define ITERATE() { \
+#   define ITERATE() { \
         temp = left_rotate_5(a) + f + e + k + buf[i]; \
         e = d; \
         d = c; \
@@ -207,7 +200,6 @@ hash_chunk(struct m_sha1_hash_t h, const void *mem)
     return h;
 }
 
-
 static struct m_sha1_hash_t
 m_sha1_set_initial_hash_values(void)
 {
@@ -222,7 +214,6 @@ m_sha1_set_initial_hash_values(void)
     return rv;
 }
 
-
 static void
 m_sha1_reset_context_buf(struct m_sha1_hash_context_t *context)
 {
@@ -230,14 +221,12 @@ m_sha1_reset_context_buf(struct m_sha1_hash_context_t *context)
     context->buf_idx = 0;
 }
 
-
 void
 m_sha1_hash_init(struct m_sha1_hash_context_t *context)
 {
     m_sha1_reset_context_buf(context);
     context->hash = m_sha1_set_initial_hash_values();
 }
-
 
 static size_t
 m_sha1_handle_leftover(struct m_sha1_hash_context_t *context, const void *data, size_t length)
@@ -275,7 +264,6 @@ m_sha1_handle_leftover(struct m_sha1_hash_context_t *context, const void *data, 
     return bytes_needed_for_chunk;
 }
 
-
 void
 m_sha1_hash_update(struct m_sha1_hash_context_t *context, const void *data, size_t length)
 {
@@ -311,7 +299,6 @@ m_sha1_hash_update(struct m_sha1_hash_context_t *context, const void *data, size
     context->buf_idx = remainder;
 }
 
-
 struct m_sha1_hash_t
 m_sha1_hash_finalize(struct m_sha1_hash_context_t *context)
 {
@@ -320,6 +307,8 @@ m_sha1_hash_finalize(struct m_sha1_hash_context_t *context)
     size_t i;
     size_t num_extra_chunks;
     struct m_sha1_hash_t rv;
+
+    memset(last_chunk, 0, sizeof(last_chunk));
 
     rv = context->hash;
     string = last_chunk;
@@ -333,7 +322,6 @@ m_sha1_hash_finalize(struct m_sha1_hash_context_t *context)
 
     return rv;
 }
-
 
 struct m_sha1_hash_t
 m_sha1_hash_buffer(const void *data, size_t length)
@@ -368,7 +356,6 @@ m_sha1_hash_buffer(const void *data, size_t length)
 
     return rv;
 }
-
 
 struct m_sha1_hash_t
 m_sha1_hash_string(const char *string)

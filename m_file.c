@@ -31,20 +31,17 @@ struct m_cas_write_handle_t
     char filename[MAX_PATH];
 };
 
-
 static int m_cas_initialized;
 static int m_have_meta_root;
 static char m_cwd[MAX_PATH];
 static char m_meta_root[MAX_PATH];
 static char m_cas_root[MAX_PATH];
 
-
 static int
 m_mkdir(const char *directory)
 {
     return _mkdir(directory);
 }
-
 
 int
 m_make_meta_dir(void)
@@ -59,14 +56,8 @@ m_make_meta_dir(void)
         return -1;
     }
 
-    if (m_mkdir(M_META_ROOT M_PATH_SEPARATOR M_META_BRANCHES) != 0)
-    {
-        return -1;
-    }
-
     return 0;
 }
-
 
 static void
 m_hash_to_string(char *buffer, size_t buffer_size, struct m_sha1_hash_t hash)
@@ -88,18 +79,17 @@ m_hash_to_string(char *buffer, size_t buffer_size, struct m_sha1_hash_t hash)
         char low_char = hex_chars[low_idx];
         char high_char = hex_chars[high_idx];
 
-        buffer[idx++] = low_char;
         buffer[idx++] = high_char;
+        buffer[idx++] = low_char;
     }
 
     buffer[idx] = 0;
 }
 
-
 static int
 m_exists(const char *filename)
 {
-    FILE *fp = fopen(filename, "r");
+    FILE *fp = fopen(filename, "rb");
 
     if (fp != NULL)
     {
@@ -109,7 +99,6 @@ m_exists(const char *filename)
 
     return 0;
 }
-
 
 static int
 m_directory_exists(const char *directory)
@@ -129,7 +118,6 @@ m_directory_exists(const char *directory)
     return stat(file, &stat_buf) == 0 && S_ISDIR(stat_buf.st_mode);
 #endif
 }
-
 
 static const char *
 m_find_meta_root(void)
@@ -170,7 +158,6 @@ m_find_meta_root(void)
     }
 }
 
-
 static const char *
 m_cas_initialize(void)
 {
@@ -195,7 +182,6 @@ m_cas_initialize(void)
     return m_cas_root;
 }
 
-
 struct m_cas_write_handle_t *
 m_cas_write_open(void)
 {
@@ -213,14 +199,13 @@ m_cas_write_open(void)
         snprintf(handle->filename, MAX_PATH, "%s" M_PATH_SEPARATOR ".cas.tmp.%d", cas_root, i++);
     } while (m_exists(handle->filename));
 
-    handle->fp = fopen(handle->filename, "w");
+    handle->fp = fopen(handle->filename, "wb");
     assert(handle->fp != NULL);
 
     m_sha1_hash_init(&handle->hash_context);
 
     return handle;
 }
-
 
 void
 m_cas_write(struct m_cas_write_handle_t *handle, const void *data, size_t length)
@@ -232,7 +217,6 @@ m_cas_write(struct m_cas_write_handle_t *handle, const void *data, size_t length
     m_sha1_hash_update(&handle->hash_context, data, length);
 }
 
-
 static void
 m_get_hive_path(char *path, size_t size, struct m_sha1_hash_t hash)
 {
@@ -242,7 +226,6 @@ m_get_hive_path(char *path, size_t size, struct m_sha1_hash_t hash)
     path[pos++] = M_PATH_SEPARATOR_CHAR;
     m_hash_to_string(path + pos, size - pos, hash);
 }
-
 
 struct m_sha1_hash_t
 m_cas_write_close(struct m_cas_write_handle_t *handle)
@@ -272,4 +255,28 @@ m_cas_write_close(struct m_cas_write_handle_t *handle)
     return hash;
 }
 
+int
+m_write(const char *filename, const void *data, size_t bytes)
+{
+    char file[MAX_PATH];
+    FILE *fp;
+    size_t bytes_written;
+
+    snprintf(file, MAX_PATH, "%s" M_PATH_SEPARATOR "%s", m_meta_root, filename);
+    fp = fopen(file, "wb");
+
+    if (!fp)
+    {
+        return -1;
+    }
+
+    bytes_written = fwrite(data, 1, bytes, fp);
+
+    if (bytes_written != bytes)
+    {
+        return -1;
+    }
+
+    return 0;
+}
 
