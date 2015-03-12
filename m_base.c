@@ -189,8 +189,8 @@ m_object_finalize_error(struct m_object_t *object)
 void
 m_object_finalize(struct m_object_t *object)
 {
-    typedef void (*finalize_fn_t)(struct m_object_t *);
-    static finalize_fn_t object_finalizers[M_NUM_TYPES] = {
+    typedef void (*m_finalize_fn_t)(struct m_object_t *);
+    static m_finalize_fn_t object_finalizers[M_NUM_TYPES] = {
         m_object_finalize_noop,
         m_reference_set_finalize,
         m_object_finalize_error,
@@ -203,12 +203,108 @@ m_object_finalize(struct m_object_t *object)
     object_finalizers[object->type](object); 
 }
 
-struct object_t *
+unsigned int
+m_realize_i4(const void *data, size_t *offset_ptr, size_t size)
+{
+    const char *ptr;
+    unsigned char b0;
+    size_t offset;
+    
+    union
+    {
+        char bytes[4];
+        unsigned int value;
+    } u;
+
+    ptr = data; 
+    offset = *offset_ptr;
+    u.value = 0;
+
+    assert(offset < size);
+    b0 = (unsigned char)*ptr;
+
+    if (b0 < 128)
+    {
+        *offset_ptr = offset + 1;
+        return (unsigned int)b0;
+    }
+    else if (b0 == 0x80)
+    {
+        u.bytes[0] = ptr[1];
+        u.bytes[1] = ptr[2];
+        *offset_ptr = offset + 3;
+
+        return u.value;
+    }
+    else if (b0 == 0xff)
+    {
+        u.bytes[0] = ptr[1];
+        u.bytes[1] = ptr[2];
+        u.bytes[2] = ptr[3];
+        u.bytes[3] = ptr[4];
+        *offset_ptr = offset + 5;
+
+        return u.value;
+    }
+
+#if M_BIG_ENDIAN
+#   error TODO: Handle big endian integers
+#endif
+
+    assert(0 && "This shouldn't be here.");
+    return 0;
+}
+
+static void
+m_realize_header(const void *data, size_t *offset, size_t size, struct m_object_t *object)
+{
+    object->type = m_realize_i4(data, offset, size);
+    object->flags = m_realize_i4(data, offset, size);
+}
+
+static enum m_object_type_t
+m_peek_type(const void *data, size_t size)
+{
+    const char *ptr;
+    char byte;
+
+    ptr = data;
+    byte = *ptr;
+
+    assert(size != 0);
+    assert(byte < M_NUM_TYPES);
+
+    return (enum m_object_type_t)byte;
+}
+
+static struct m_object_t *
+m_object_construct_error(const void *data, size_t size)
+{
+    M_UNUSED(data);
+    M_UNUSED(size);
+
+    abort();
+}
+
+struct m_object_t *
 m_object_realize(struct m_sha1_hash_t hash)
 {
+    typedef struct m_object_t *(*m_constructor_fn_t)(const void *, size_t);
+    m_constructor_fn_t object_constructors[M_NUM_TYPES] = {
+        m_object_construct_error,
+        m_reference_set_construct,
+        m_object_construct_error,
+        m_tree_construct,
+        m_commit_construct,
+        m_branch_construct,
+        m_repository_construct
+    };
+
+    enum m_object_type_t type;
     int rv;
     void *data;
     size_t size;
+    struct m_object_t *object;
 
     rv = m_cas_read(hash, &data, &size);
 
@@ -216,5 +312,11 @@ m_object_realize(struct m_sha1_hash_t hash)
     {
         return NULL;
     }
+
+    type = m_peek_type(data, size);
+    object = object_constructors[type](data, size);
+    free(data);
+
+    return object;
 }
 

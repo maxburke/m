@@ -18,6 +18,9 @@ m_reference_set_create(void);
 void
 m_reference_set_add(struct m_object_t *reference_set, struct m_object_t *item);
 
+struct m_object_t *
+m_reference_set_construct(const void *data, size_t size);
+
 /**
  * Serializes a reference set working instance to disk, invalidating the runtime
  * object, and returning its data store key.

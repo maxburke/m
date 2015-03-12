@@ -80,6 +80,9 @@ m_object_null_create(void);
 void
 m_object_finalize(struct m_object_t *object);
 
-struct object_t *
+unsigned int
+m_realize_i4(const void *data, size_t *offset_ptr, size_t size);
+
+struct m_object_t *
 m_object_realize(struct m_sha1_hash_t hash);
 
