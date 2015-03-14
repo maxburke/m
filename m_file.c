@@ -1,7 +1,7 @@
 #include <assert.h>
-#include <direct.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "m_file.h"
 #include "m_sha1.h"
@@ -12,14 +12,25 @@
 
 #ifdef _MSC_VER
 #   define WIN32_LEAN_AND_MEAN
+#   include <direct.h>
 #   include <Windows.h>
 
 #   define MAX_PATH 260
+#   define chdir _chdir
+#   define getcwd _getcwd
+#   define mkdir _mkdir
 #   define snprintf _snprintf
+#   define unlink _unlink
 #   define M_PATH_SEPARATOR "\\"
 #   define M_PATH_SEPARATOR_CHAR '\\'
 #else
-#   error
+#   include <sys/stat.h>
+#   include <unistd.h>
+#   include <limits.h>
+
+#   define MAX_PATH PATH_MAX
+#   define M_PATH_SEPARATOR "/"
+#   define M_PATH_SEPARATOR_CHAR '/'
 #endif
 
 #define HASH_STRING_BUFFER_SIZE ((2 * sizeof(struct m_sha1_hash_t)) + 1)
@@ -40,7 +51,24 @@ static char m_cas_root[MAX_PATH];
 static int
 m_mkdir(const char *directory)
 {
-    return _mkdir(directory);
+#ifdef _MSC_VER
+    return mkdir(directory);
+#else
+    /*
+     * In POSIX environments we default the repository directories to have the
+     * same permissions as the parent directory.
+     */
+
+    char path[MAX_PATH];
+    struct stat stat_buf;
+    mode_t mode;
+
+    snprintf(path, MAX_PATH, "%s/..", directory);
+    stat(path, &stat_buf);
+    mode = stat_buf.st_mode & 0x1f;
+
+    return mkdir(directory, mode);
+#endif
 }
 
 int
@@ -113,9 +141,9 @@ m_directory_exists(const char *directory)
 
     return 0;
 #else
-    struct _stat stat_buf;
+    struct stat stat_buf;
 
-    return stat(file, &stat_buf) == 0 && S_ISDIR(stat_buf.st_mode);
+    return stat(directory, &stat_buf) == 0 && S_ISDIR(stat_buf.st_mode);
 #endif
 }
 
@@ -132,7 +160,7 @@ m_find_meta_root(void)
         return m_meta_root;
     }
 
-    rv = _getcwd(m_cwd, MAX_PATH);
+    rv = getcwd(m_cwd, MAX_PATH);
     assert(rv != NULL);
     strlcpy(dir, m_cwd, MAX_PATH);
 
@@ -143,15 +171,15 @@ m_find_meta_root(void)
         if (m_directory_exists(file))
         {
             strlcpy(m_meta_root, file, MAX_PATH);
-            _chdir(m_cwd);
+            chdir(m_cwd);
             m_have_meta_root = 1;
 
             return m_meta_root;
         }
 
         strlcpy(prev_dir, dir, MAX_PATH);
-        _chdir("..");
-        rv = _getcwd(dir, MAX_PATH);
+        chdir("..");
+        rv = getcwd(dir, MAX_PATH);
         assert(rv != NULL);
 
         M_VERIFY(!m_streq(dir, prev_dir), "Unable to find valid repository root in directory hierarchy.");
@@ -243,12 +271,12 @@ m_cas_write_close(struct m_cas_write_handle_t *handle)
 #ifdef _MSC_VER
         MoveFileA(handle->filename, path);
 #else
-#   error
+        rename(handle->filename, path);
 #endif
     }
     else
     {
-        _unlink(handle->filename);
+        unlink(handle->filename);
     }
 
     free(handle);

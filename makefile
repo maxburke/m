@@ -7,8 +7,7 @@ HEADERS = $(wildcard *.h)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 m : $(OBJS)
-	if test -f $@; then rm $@; fi
-	ar -r $@ $(OBJS)
+	clang -o $@ $(LIBS) $^ $(LDFLAGS)
 
 .PHONY : clean
 clean :

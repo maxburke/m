@@ -4,7 +4,16 @@
 
 #define M_ARRAY_COUNT(x) ((sizeof (x))/(sizeof (x)[0]))
 #define M_UNUSED(x) ((void)x)
-#define M_VERIFY(x, y) __pragma(warning(push)) __pragma(warning(disable:4127)) do { if (!(x)) { m_report_fatal_error(y); } } while (0) __pragma(warning(pop))
+
+#ifdef _MSC_VER
+#   define M_VERIFY(x, y) \
+        __pragma(warning(push)) \
+        __pragma(warning(disable:4127)) \
+        do { if (!(x)) { m_report_fatal_error(y); } } while (0) \
+        __pragma(warning(pop))
+#else
+#   define M_VERIFY(x, y) do { if (!(x)) { m_report_fatal_error(y); } } while (0)
+#endif
 
 
 /**
