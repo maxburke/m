@@ -26,7 +26,7 @@ m_reference_set_create(void)
     reference_set->count = 0;
     reference_set->objects = calloc(initial_capacity, sizeof(struct m_object_t *));
 
-    return (struct m_object_t *)reference_set;
+    return &reference_set->header;
 }
 
 void

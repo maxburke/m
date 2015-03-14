@@ -27,7 +27,7 @@ m_commit_create(const char *log, struct m_object_t *previous_commit, struct m_ob
     commit->previous_commit = previous_commit;
     commit->root = root;
 
-    return (struct m_object_t *)commit;
+    return &commit->header;
 }
 
 void
@@ -57,5 +57,10 @@ m_commit_finalize(struct m_object_t *object)
     m_serialize_object_ref(write_handle, previous_commit);
     m_serialize_object_ref(write_handle, root);
     m_serialize_end(write_handle, object);
+}
+
+struct m_object_t *
+m_commit_construct(struct m_sha1_hash_t hash, const void *data, size_t size)
+{
 }
 

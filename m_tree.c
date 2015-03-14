@@ -25,7 +25,7 @@ m_tree_create(const char *name, struct m_object_t *contents)
     tree->name = name;
     tree->contents = contents;
 
-    return (struct m_object_t *)tree;
+    return &tree->header;
 }
 
 void

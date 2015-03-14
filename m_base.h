@@ -81,7 +81,16 @@ void
 m_object_finalize(struct m_object_t *object);
 
 unsigned int
-m_realize_i4(const void *data, size_t *offset_ptr, size_t size);
+m_realize_i4(const void *data, size_t *offset, size_t size);
+
+char *
+m_realize_string(const void *data, size_t *offset, size_t size);
+
+struct m_object_t *
+m_realize_ref(const void *data, size_t *offset, size_t size);
+
+void
+m_realize_header(const void *data, size_t *offset, size_t size, struct m_object_t *object);
 
 struct m_object_t *
 m_object_realize(struct m_sha1_hash_t hash);

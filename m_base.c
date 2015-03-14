@@ -204,11 +204,11 @@ m_object_finalize(struct m_object_t *object)
 }
 
 unsigned int
-m_realize_i4(const void *data, size_t *offset_ptr, size_t size)
+m_realize_i4(const void *data, size_t *offset, size_t size)
 {
     const char *ptr;
     unsigned char b0;
-    size_t offset;
+    size_t i;
     
     union
     {
@@ -217,22 +217,22 @@ m_realize_i4(const void *data, size_t *offset_ptr, size_t size)
     } u;
 
     ptr = data; 
-    offset = *offset_ptr;
+    i = *offset;
     u.value = 0;
 
-    assert(offset < size);
+    assert(i < size);
     b0 = (unsigned char)*ptr;
 
     if (b0 < 128)
     {
-        *offset_ptr = offset + 1;
+        *offset = i + 1;
         return (unsigned int)b0;
     }
     else if (b0 == 0x80)
     {
         u.bytes[0] = ptr[1];
         u.bytes[1] = ptr[2];
-        *offset_ptr = offset + 3;
+        *offset = i + 3;
 
         return u.value;
     }
@@ -242,7 +242,7 @@ m_realize_i4(const void *data, size_t *offset_ptr, size_t size)
         u.bytes[1] = ptr[2];
         u.bytes[2] = ptr[3];
         u.bytes[3] = ptr[4];
-        *offset_ptr = offset + 5;
+        *offset = i + 5;
 
         return u.value;
     }
@@ -255,7 +255,53 @@ m_realize_i4(const void *data, size_t *offset_ptr, size_t size)
     return 0;
 }
 
-static void
+char *
+m_realize_string(const void *data, size_t *offset, size_t size)
+{
+    const char *src;
+    unsigned int length;
+    size_t i;
+    char *string;
+
+    src = data;
+    length = m_realize_i4(data, offset, size);
+    string = malloc(length + 1);
+
+    i = *offset;
+    memcpy(string, src + i, length);
+    string[length] = 0;
+
+    *offset = i + length;
+
+    return string;
+}
+
+struct m_object_t *
+m_realize_ref(const void *data, size_t *offset, size_t size)
+{
+    struct m_sha1_hash_t hash;
+    const char *src;
+    char *dest;
+    size_t i;
+
+    src = data;
+    dest = (char *)&hash;
+    i = *offset;
+
+    assert(i + sizeof(struct m_sha1_hash_t) <= size);
+
+    memcpy(dest, src + i, sizeof(struct m_sha1_hash_t));
+    *offset = i + sizeof(struct m_sha1_hash_t);
+
+    /*
+     * TODO: If disk IO here is a problem when realizing, say, references to
+     * large trees then delay load until the reference is required.
+     */
+
+    return m_object_realize(hash);
+}
+
+void
 m_realize_header(const void *data, size_t *offset, size_t size, struct m_object_t *object)
 {
     object->type = m_realize_i4(data, offset, size);
@@ -278,8 +324,9 @@ m_peek_type(const void *data, size_t size)
 }
 
 static struct m_object_t *
-m_object_construct_error(const void *data, size_t size)
+m_object_construct_error(struct m_sha1_hash_t hash, const void *data, size_t size)
 {
+    M_UNUSED(hash);
     M_UNUSED(data);
     M_UNUSED(size);
 
@@ -289,7 +336,7 @@ m_object_construct_error(const void *data, size_t size)
 struct m_object_t *
 m_object_realize(struct m_sha1_hash_t hash)
 {
-    typedef struct m_object_t *(*m_constructor_fn_t)(const void *, size_t);
+    typedef struct m_object_t *(*m_constructor_fn_t)(struct m_sha1_hash_t, const void *, size_t);
     m_constructor_fn_t object_constructors[M_NUM_TYPES] = {
         m_object_construct_error,
         m_reference_set_construct,
@@ -314,7 +361,7 @@ m_object_realize(struct m_sha1_hash_t hash)
     }
 
     type = m_peek_type(data, size);
-    object = object_constructors[type](data, size);
+    object = object_constructors[type](hash, data, size);
     free(data);
 
     return object;

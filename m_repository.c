@@ -27,7 +27,7 @@ m_repository_create(struct m_object_t *current_branch, const char *name, struct 
     repository->name = name;
     repository->branch_list = branch_list;
 
-    return (struct m_object_t *)repository;
+    return &repository->header;
 }
 
 void
