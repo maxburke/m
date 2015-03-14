@@ -62,5 +62,19 @@ m_commit_finalize(struct m_object_t *object)
 struct m_object_t *
 m_commit_construct(struct m_sha1_hash_t hash, const void *data, size_t size)
 {
+    size_t offset;
+    struct m_commit_t *commit;
+
+    offset = 0;
+    commit = calloc(1, sizeof(struct m_commit_t));
+
+    m_realize_header(data, &offset, size, &commit->header);
+    commit->header.hash = hash;
+    commit->header.finalized = 1;
+    commit->log = m_realize_string(data, &offset, size);
+    commit->previous_commit = m_realize_ref(data, &offset, size);
+    commit->root = m_realize_ref(data, &offset, size);
+
+    return &commit->header;
 }
 
