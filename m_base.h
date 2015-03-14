@@ -21,6 +21,7 @@ m_streq(const char *a, const char *b);
 void
 m_report_fatal_error(const char *reason);
 
+#ifdef _MSC_VER
 /**
  * Convenience method for platform C libraries that do not support strlcpy,
  * such as Windows. Unlike strncpy, strlcpy will guarantee that the output
@@ -35,6 +36,7 @@ m_report_fatal_error(const char *reason);
  */
 size_t
 strlcpy(char *dest, const char *src, size_t size);
+#endif
 
 enum m_object_type_t
 {
