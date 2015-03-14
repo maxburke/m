@@ -58,6 +58,13 @@ m_init(int argc, char **argv)
 {
     const char *repository_name;
     const char *default_branch_name = "master";
+    struct m_object_t *head_items;
+    struct m_object_t *tree;
+    struct m_object_t *head;
+    struct m_object_t *null_object;
+    struct m_object_t *branch;
+    struct m_object_t *branch_list;
+    struct m_object_t *repository;
 
     if (argc < 3)
     {
@@ -75,14 +82,6 @@ m_init(int argc, char **argv)
     {
         return -1;
     }
-
-    struct m_object_t *head_items;
-    struct m_object_t *tree;
-    struct m_object_t *head;
-    struct m_object_t *null_object;
-    struct m_object_t *branch;
-    struct m_object_t *branch_list;
-    struct m_object_t *repository;
 
     head_items      = m_reference_set_create();
     tree            = m_tree_create("", head_items);
@@ -102,15 +101,6 @@ m_init(int argc, char **argv)
 
 static int
 m_branch(int argc, char **argv)
-{
-    M_UNUSED(argc);
-    M_UNUSED(argv);
-
-    return -1;
-}
-
-static int
-m_checkout(int argc, char **argv)
 {
     M_UNUSED(argc);
     M_UNUSED(argv);
@@ -167,21 +157,20 @@ static int
 m_help(int argc, char **argv);
 
 static struct m_action_t actions[] = {
-    { "add",        m_add },
-    { "edit",       m_edit },
-    { "rm",         m_rm },
-    { "revert",     m_revert },
+    { "add",        m_add,      "" },
+    { "edit",       m_edit,     "" },
+    { "rm",         m_rm,       "" },
+    { "revert",     m_revert,   "" },
 
-    { "init",       m_init },
-    { "branch",     m_branch },
-    { "checkout",   m_checkout },
-    { "merge",      m_merge },
-    { "push",       m_push },
-    { "pull",       m_pull },
-    { "resolve",    m_resolve },
+    { "init",       m_init,     "" },
+    { "branch",     m_branch,   "" },
+    { "merge",      m_merge,    "" },
+    { "push",       m_push,     "" },
+    { "pull",       m_pull,     "" },
+    { "resolve",    m_resolve,  "" },
 
-    { "log",        m_log },
-    { "help",       m_help }
+    { "log",        m_log,      "" },
+    { "help",       m_help,     "" }
 };
 
 static int
