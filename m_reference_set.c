@@ -110,3 +110,25 @@ m_reference_set_finalize(struct m_object_t *object)
     m_serialize_end(write_handle, object);
 }
 
+struct m_object_t *
+m_reference_set_construct(struct m_sha1_hash_t hash, const void *data, size_t size)
+{
+    size_t offset;
+    struct m_reference_set_t *reference_set;
+    int count;
+    struct m_object_t **objects;
+    int i;
+
+    offset = 0;
+    reference_set = calloc(1, sizeof(struct m_reference_set));
+    reference_set->count = count = m_realize_i4(data, &offset, size);
+    reference_set->objects = objects = calloc(count, sizeof(struct m_object_t *));
+
+    for (i = 0; i < count; ++i)
+    {
+        objects[i] = m_realize_ref(data, &offset, size);
+    }
+
+    return &reference_set->header;
+}
+
