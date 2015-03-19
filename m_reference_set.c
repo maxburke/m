@@ -120,7 +120,11 @@ m_reference_set_construct(struct m_sha1_hash_t hash, const void *data, size_t si
     int i;
 
     offset = 0;
-    reference_set = calloc(1, sizeof(struct m_reference_set));
+    reference_set = calloc(1, sizeof(struct m_reference_set_t));
+
+    m_realize_header(data, &offset, size, &reference_set->header);
+    reference_set->header.hash = hash;
+    reference_set->header.finalized = 1;
     reference_set->count = count = m_realize_i4(data, &offset, size);
     reference_set->objects = objects = calloc(count, sizeof(struct m_object_t *));
 

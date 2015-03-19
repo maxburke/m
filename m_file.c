@@ -42,6 +42,16 @@ struct m_cas_write_handle_t
     char filename[MAX_PATH];
 };
 
+struct m_cas_read_handle_t
+{
+#ifdef _MSC_VER
+    HANDLE file_handle;
+    HANDLE file_mapping;
+    void *ptr;
+#else
+#endif
+};
+
 static int m_cas_initialized;
 static int m_have_meta_root;
 static char m_cwd[MAX_PATH];
@@ -281,6 +291,93 @@ m_cas_write_close(struct m_cas_write_handle_t *handle)
 
     free(handle);
     return hash;
+}
+
+struct m_cas_read_handle_t *
+m_cas_read_open(struct m_sha1_hash_t hash, void **data, size_t *bytes)
+{
+#ifdef _MSC_VER
+    char path[MAX_PATH];
+    HANDLE file_handle;
+    LARGE_INTEGER file_size;
+    HANDLE file_mapping;
+    void *ptr;
+    struct m_cas_read_handle_t *handle;
+
+    m_get_hive_path(path, MAX_PATH, hash);
+    file_handle = CreateFile(
+            path, 
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        return NULL;
+    }
+
+    if (!GetFileSizeEx(file_handle, &file_size))
+    {
+        CloseHandle(file_handle);
+        return NULL;
+    }
+
+    file_mapping = CreateFileMapping(
+            file_handle,
+            NULL,
+            PAGE_READONLY,
+            (DWORD)file_size.HighPart,
+            file_size.LowPart,
+            NULL);
+
+    if (file_mapping == NULL)
+    {
+        CloseHandle(file_handle);
+        return NULL;
+    }
+
+    ptr = MapViewOfFile(
+            file_mapping,
+            FILE_MAP_READ,
+            0,
+            0,
+            0);
+
+    if (ptr == NULL)
+    {
+        CloseHandle(file_mapping);
+        CloseHandle(file_handle);
+        return NULL;
+    }
+
+    handle = calloc(1, sizeof(struct m_cas_read_handle_t));
+    handle->file_handle = file_handle;
+    handle->file_mapping = file_mapping;
+    handle->ptr = ptr;
+    *data = ptr;
+    *bytes = (size_t)file_size.QuadPart;
+
+    return handle;
+
+#else
+#   error TBD
+#endif
+}
+
+void
+m_cas_read_close(struct m_cas_read_handle_t *handle)
+{
+#ifdef _MSC_VER
+    UnmapViewOfFile(handle->ptr);
+    CloseHandle(handle->file_mapping);
+    CloseHandle(handle->file_handle);
+    free(handle);
+#else
+#   error TBD
+#endif
 }
 
 int

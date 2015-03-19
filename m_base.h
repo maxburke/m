@@ -62,8 +62,9 @@ enum m_object_type_t
 struct m_object_t
 {
     struct m_sha1_hash_t hash;
-    short finalized;
-    short realized;
+    char finalized;
+    char realized;
+    unsigned short version;
     unsigned int type;
     unsigned int flags;
 };

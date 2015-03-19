@@ -54,3 +54,21 @@ m_tree_finalize(struct m_object_t *object)
     m_serialize_end(write_handle, object);
 }
 
+struct m_object_t *
+m_tree_construct(struct m_sha1_hash_t hash, const void *data, size_t size)
+{
+    size_t offset;
+    struct m_tree_t *tree;
+
+    offset = 0;
+    tree = calloc(1, sizeof(struct m_tree_t));
+
+    m_realize_header(data, &offset, size, &tree->header);
+    tree->header.hash = hash;
+    tree->header.finalized = 1;
+    tree->name = m_realize_string(data, &offset, size);
+    tree->contents = m_realize_ref(data, &offset, size);
+
+    return &tree->header;
+}
+

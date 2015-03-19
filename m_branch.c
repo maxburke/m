@@ -7,12 +7,12 @@
 struct m_branch_t
 {
     struct m_object_t header;
-    const char *branch_name;
+    const char *name;
     struct m_object_t *head_commit;
 };
 
 struct m_object_t *
-m_branch_create(const char *branch_name, struct m_object_t *head_commit)
+m_branch_create(const char *name, struct m_object_t *head_commit)
 {
     struct m_branch_t *branch;
 
@@ -21,7 +21,7 @@ m_branch_create(const char *branch_name, struct m_object_t *head_commit)
     branch = calloc(1, sizeof(struct m_branch_t));
     branch->header.type = M_BRANCH;
     branch->header.realized = 1;
-    branch->branch_name = branch_name;
+    branch->name = name;
     branch->head_commit = head_commit;
 
     return &branch->header;
@@ -44,7 +44,7 @@ m_branch_finalize(struct m_object_t *object)
     branch = (struct m_branch_t *)object;
 
     write_handle = m_serialize_begin(object);
-    m_serialize_string(write_handle, branch->branch_name);
+    m_serialize_string(write_handle, branch->name);
     m_serialize_object_ref(write_handle, branch->head_commit);
     m_serialize_end(write_handle, object);
 }
@@ -61,7 +61,7 @@ m_branch_construct(struct m_sha1_hash_t hash, const void *data, size_t size)
     m_realize_header(data, &offset, size, &branch->header);
     branch->header.hash = hash;
     branch->header.finalized = 1;
-    branch->branch_name = m_realize_string(data, &offset, size);
+    branch->name = m_realize_string(data, &offset, size);
     branch->head_commit = m_realize_ref(data, &offset, size);
 
     return &branch->header;

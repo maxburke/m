@@ -59,3 +59,22 @@ m_repository_finalize(struct m_object_t *object)
     m_serialize_end(write_handle, object);
 }
 
+struct m_object_t *
+m_repository_construct(struct m_sha1_hash_t hash, const void *data, size_t size)
+{
+    size_t offset;
+    struct m_repository_t *repository;
+
+    offset = 0;
+    repository = calloc(1, sizeof(struct m_repository_t));
+
+    m_realize_header(data, &offset, size, &repository->header);
+    repository->header.hash = hash;
+    repository->header.finalized = 1;
+    repository->current_branch = m_realize_ref(data, &offset, size);
+    repository->name = m_realize_string(data, &offset, size);
+    repository->branch_list = m_realize_ref(data, &offset, size);
+
+    return &repository->header;
+}
+

@@ -56,6 +56,7 @@ m_serialize_header(struct m_cas_write_handle_t *write_handle, struct m_object_t 
      */
 
     m_serialize_i4(write_handle, object->type);
+    m_serialize_i4(write_handle, object->version);
     m_serialize_i4(write_handle, object->flags);
 }
 
@@ -304,7 +305,12 @@ m_realize_ref(const void *data, size_t *offset, size_t size)
 void
 m_realize_header(const void *data, size_t *offset, size_t size, struct m_object_t *object)
 {
+    unsigned int version;
+
     object->type = m_realize_i4(data, offset, size);
+    version = m_realize_i4(data, offset, size);
+    assert(version <= 65535);
+    object->version = (unsigned short)version;
     object->flags = m_realize_i4(data, offset, size);
 }
 
@@ -348,21 +354,22 @@ m_object_realize(struct m_sha1_hash_t hash)
     };
 
     enum m_object_type_t type;
-    int rv;
+    struct m_cas_read_handle_t *handle;
     void *data;
     size_t size;
     struct m_object_t *object;
 
-    rv = m_cas_read(hash, &data, &size);
+    handle = m_cas_read_open(hash, &data, &size);
 
-    if (rv < 0)
+    if (handle == NULL)
     {
         return NULL;
     }
 
     type = m_peek_type(data, size);
     object = object_constructors[type](hash, data, size);
-    free(data);
+
+    m_cas_read_close(handle);
 
     return object;
 }
