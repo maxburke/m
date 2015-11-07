@@ -47,14 +47,14 @@ Commit Item
   * [int] TAG
   * [int] Flags
   * [ref] File content reference
-  * [ref] Previous commit or resolve reference
+  * [ref] Previous commit item or resolve reference
   * [str] File name
 
 Resolve
 -------
   * [int] TAG
-  * [ref] Base commit (ie, from master server)
-  * [ref] Local commit
+  * [ref] Base commit item (ie, from master server)
+  * [ref] Local commit item
 
 Tree
 ----

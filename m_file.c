@@ -387,7 +387,7 @@ m_write(const char *filename, const void *data, size_t bytes)
     FILE *fp;
     size_t bytes_written;
 
-    snprintf(file, MAX_PATH, "%s" M_PATH_SEPARATOR "%s", m_meta_root, filename);
+    snprintf(file, sizeof file, "%s" M_PATH_SEPARATOR "%s", m_meta_root, filename);
     fp = fopen(file, "wb");
 
     if (!fp)
@@ -405,3 +405,31 @@ m_write(const char *filename, const void *data, size_t bytes)
     return 0;
 }
 
+int
+m_read(const char *filename, void **data, size_t *bytes)
+{
+    char file[MAX_PATH];
+    FILE *fp;
+    size_t size;
+    void *buf;
+
+    snprintf(file, sizeof file, "%s" M_PATH_SEPARATOR "%s", m_meta_root, filename);
+    fp = fopen(file, "rb");
+
+    if (!fp)
+    {
+        return -1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size = (size_t)ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    buf = calloc(1, size);
+    fread(buf, 1, size, fp);
+
+    *data = buf;
+    *bytes = size;
+
+    return 0;
+}

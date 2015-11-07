@@ -20,14 +20,37 @@ struct m_action_t
 static int
 m_add(int argc, char **argv)
 {
-    M_UNUSED(argc);
-    M_UNUSED(argv);
+    int i;
+    void *data;
+    size_t size;
+    size_t offset;
+    struct m_object_t *stage;
+
+    if (argc < 3)
+    {
+        return -1;
+    }
+
+    if (m_read("stage.dat", &data, &size))
+    {
+        stage = m_reference_set_create();
+    }
+    else
+    {
+        offset = 0;
+        stage = m_realize_ref(data, &offset, size);
+    }
+
+    for (i = 2; i < argc; ++i)
+    {
+        m_add_file(stage, argv[i]);
+    }
 
     return -1;
 }
 
 static int
-m_edit(int argc, char **argv)
+m_rm(int argc, char **argv)
 {
     M_UNUSED(argc);
     M_UNUSED(argv);
@@ -36,7 +59,7 @@ m_edit(int argc, char **argv)
 }
 
 static int
-m_rm(int argc, char **argv)
+m_auto(int argc, char **argv)
 {
     M_UNUSED(argc);
     M_UNUSED(argv);
@@ -145,6 +168,15 @@ m_resolve(int argc, char **argv)
 }
 
 static int
+m_commit(int argc, char **argv)
+{
+    M_UNUSED(argc);
+    M_UNUSED(argv);
+
+    return -1;
+}
+
+static int
 m_log(int argc, char **argv)
 {
     M_UNUSED(argc);
@@ -158,8 +190,8 @@ m_help(int argc, char **argv);
 
 static struct m_action_t actions[] = {
     { "add",        m_add,      "" },
-    { "edit",       m_edit,     "" },
     { "rm",         m_rm,       "" },
+    { "auto",       m_auto,     "" },
     { "revert",     m_revert,   "" },
 
     { "init",       m_init,     "" },
@@ -168,6 +200,7 @@ static struct m_action_t actions[] = {
     { "push",       m_push,     "" },
     { "pull",       m_pull,     "" },
     { "resolve",    m_resolve,  "" },
+    { "commit",     m_commit,   "" },
 
     { "log",        m_log,      "" },
     { "help",       m_help,     "" }
